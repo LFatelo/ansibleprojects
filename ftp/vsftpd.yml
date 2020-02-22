@@ -1,0 +1,70 @@
+---
+- hosts: webserver
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  connection: ssh
+  gather_facts: yes
+  tasks:
+    - name: Install necessary packages
+      yum:
+       name:
+        - libselinux-python
+        - policycoreutils-python
+       state: latest
+    - name: firewall for FTP
+      firewalld:
+        service: ftp
+        state: enabled
+        immediate: yes
+        permanent: yes
+      ignore_errors: yes
+    - name: custom ports for FTP
+      firewalld:
+        port: 990/tcp
+        state: enabled
+        permanent: yes
+        immediate: yes
+      ignore_errors: yes
+    - name: more custom ports
+      firewalld:
+        port: 40000-50000/tcp
+        state: enabled
+        permanent: yes
+        immediate: yes
+      ignore_errors: yes
+    - name: limit FTP speed in order to not break server
+      firewalld:
+        rich_rule: 'rule service name="ftp" audit limit value="1/m" accept'
+        permanent: yes
+        state: enabled
+        immediate: yes
+      ignore_errors: yes
+    - name: SELinux for custom ports
+      seport:
+        ports: 990
+        proto: tcp
+        setype: ftp_port_t
+        state: present
+      ignore_errors: yes
+    - name: create public folder
+      command: mkdir -p /var/ftp/pub
+    - name: write conf file
+      copy: content="anonymous_enable=YES" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="local_enable=NO" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="anon_root=/var/ftp" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="no_anon_password=YES" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="hide_ids=YES" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="pasv_min_port=40000" dest="/etc/vsftpd.conf"
+    - name: more confs
+      copy: content="pasv_max_port=50000" dest="/etc/vsftpd.conf"
+    - name: start vsftpd
+      service:
+        name: vsftpd
+        state: started
+        enabled: yes

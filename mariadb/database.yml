@@ -1,0 +1,26 @@
+---
+- hosts: database
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  connection: ssh
+  gather_facts: yes
+  tasks:
+  - name: update everything
+    yum: name=* state=latest
+  - name: MariaDB installation
+    yum:
+      name:
+        - mariadb
+        - mariadb-server
+  - name: firewall ports
+    firewalld:
+      service: mysql
+      state: enabled
+      permanent: yes
+      immediate: yes
+  - name: kickstart service
+    service:
+      name: mariadb
+      state: started
+      enabled: yes
